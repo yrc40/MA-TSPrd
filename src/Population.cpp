@@ -1,4 +1,5 @@
 #include "Population.h"
+#include <unordered_set>
 
 Population::Population(Data& data, Split& split)
     : data(data), split(split), individuals(data.params.mu + data.params.lambda + 1), bestSolution(data) {
@@ -127,15 +128,49 @@ double Population::nCloseMean(Individual* indiv) {
 
 std::pair<Individual*, Individual*> Population::selectParents() {
     updateBiasedFitness();
+    int tournamentSize = individuals.size() / 4;
+    std::unordered_set<int> selectedIndices;
     std::uniform_int_distribution<int> dist(0, individuals.size() - 1);
 
-    int first = dist(data.generator), second = dist(data.generator);
+    std::vector<Individual*> selectedIndividuals;
+    while (selectedIndividuals.size() < tournamentSize) {
+        int index = dist(data.generator);
+        if (selectedIndices.find(index) == selectedIndices.end()) {
+            selectedIndices.insert(index);
+            selectedIndividuals.push_back(individuals[index]);
+        }
+    }
+
+    auto firstParent = selectedIndividuals[0];
+    for (auto &el : selectedIndividuals) {
+        if (firstParent->biasedFitness > el->biasedFitness) {
+            firstParent = el;
+        }
+    }
+
+    selectedIndividuals.clear();
+    while (selectedIndividuals.size() < tournamentSize) {
+        int index = dist(data.generator);
+        if (selectedIndices.find(index) == selectedIndices.end()) {
+            selectedIndices.insert(index);
+            selectedIndividuals.push_back(individuals[index]);
+        }
+    }
+
+    auto secondParent = selectedIndividuals[0];
+    for (auto &el : selectedIndividuals) {
+        if (secondParent->biasedFitness > el->biasedFitness) {
+            secondParent = el;
+        }
+    }
+
+    /*int first = dist(data.generator), second = dist(data.generator);
     auto indiv1 = individuals[first], indiv2 = individuals[second];
     auto firstParent = indiv1->biasedFitness < indiv2->biasedFitness ? indiv1 : indiv2;
 
     first = dist(data.generator), second = dist(data.generator);
     indiv1 = individuals[first], indiv2 = individuals[second];
-    auto secondParent = indiv1->biasedFitness < indiv2->biasedFitness ? indiv1 : indiv2;
+    auto secondParent = indiv1->biasedFitness < indiv2->biasedFitness ? indiv1 : indiv2;*/
 
     return {firstParent, secondParent};
 }
